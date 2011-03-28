@@ -1,18 +1,17 @@
-import datetime
+from datetime import datetime
 
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes import generic
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import permalink
 from django.contrib.auth.models import User
 from django.contrib.localflavor.us.models import USStateField
+from myutils.models import USAddressPhoneMixin
 from django_extensions.db.models import TimeStampedModel, TitleSlugDescriptionModel
 from eventy.managers import UpcomingManager
 
-class Place(TitleSlugDescriptionModel, TimeStampedModel):
-    address=models.CharField(_('Address'), max_length=150)
-    city=models.CharField(_('City'), max_length=150)
-    state=USStateField(_('State'))
-    zipcode=models.IntegerField(_('Zipcode'), max_length=9)
+class Place(TitleSlugDescriptionModel, TimeStampedModel, USAddressPhoneMixin):
 
     class Meta:
         verbose_name = _('place')
@@ -21,7 +20,7 @@ class Place(TitleSlugDescriptionModel, TimeStampedModel):
     def __unicode__(self):
         return self.title
 
-class Calendar(TitleSlugDescription, TimeStampedModel):
+class Calendar(TitleSlugDescriptionModel, TimeStampedModel):
     """Calendar model."""
 
     class Meta:
@@ -31,25 +30,52 @@ class Calendar(TitleSlugDescription, TimeStampedModel):
     def __unicode__(self):
         return self.title
 
+    @models.permalink
     def get_absolute_url(self):
-        return ('calendar_detail', None, { 'slug': self.slug, })
+        return ('event-calendar-detail', None, { 'cal_slug': self.slug, })
 
-class Event(TitleSlugDescription, TimeStampedModel):
+class Event(TitleSlugDescriptionModel, TimeStampedModel):
     """Event model"""
     calendar=models.ForeignKey(Calendar, blank=True, null=True)
-    place = models.ForeignKey(Place, blank=True, null=True)
-    place_string = models.CharField(_('One-off place'), max_length=200, blank=True)
     submitted_by = models.ForeignKey(User, blank=True, null=True)
 
     class Meta:
         verbose_name = _('event')
         verbose_name_plural = _('events')
 
+    def __init__(self, *args, **kwargs):
+        super (Event, self).__init__(*args, **kwargs)
+        self._upcoming = None
+        self._past = None
+
+    @property
+    def upcoming_event_times(self):
+        if not self._upcoming:
+            try:
+                times = self.event_times.all().filter(start__gte=datetime.now().date)
+            except(Event.DoesNotExist, IndexError):
+                times = None
+            self._upcoming = times
+        return self._upcoming
+
+
+    @property
+    def past_event_times(self):
+        if not self._past:
+            try:
+                times = self.event_times.all().filter(start__lte=datetime.now().date)
+            except(Event.DoesNotExist, IndexError):
+                times = None
+            self._past= times
+        return self._past
+
     def __unicode__(self):
         return self.title
 
+    @models.permalink
     def get_absolute_url(self):
-        return ('event_info', None, { 'slug': self.event.slug, })
+        return ('event-info', None, { 'slug': self.event.slug, })
+
 
 class EventTime(models.Model):
     """EventTime model
@@ -58,7 +84,10 @@ class EventTime(models.Model):
     event = models.ForeignKey(Event, related_name='event_times')
     start = models.DateTimeField()
     end = models.DateTimeField(blank=True, null=True)
+    place = models.ForeignKey(Place, blank=True, null=True)
+    place_string = models.CharField(_('One-off place'), max_length=200, blank=True)
     is_all_day = models.BooleanField(default=False)
+    notes = models.TextField(_('Notes'), blank=True, null=True)
 
     objects = models.Manager()
     upcoming_objects = UpcomingManager()
@@ -67,17 +96,27 @@ class EventTime(models.Model):
         verbose_name = _('event time')
         verbose_name_plural = _('event times')
 
+    def __init__(self, *args, **kwargs):
+        super (EventTime, self).__init__(*args, **kwargs)
+        self._next = None
+        self._previous = None
+
     @property
     def is_past(self):
-        NOW = datetime.date.now()
+        NOW = datetime.now().date
         if self.start < NOW:
             return True
         return False
 
+    def save(self, *args, **kwargs):
+        if self.place and not self.place_string:
+            self.place_string = self.place.__unicode__()
+        super(EventTime, self).save(*args, **kwargs)
+
     def __unicode__(self):
         return u'%s' % self.event.title
 
-    @permalink
+    @models.permalink
     def get_absolute_url(self):
         return ('event-detail', None, {
             'year': self.start.year,
@@ -85,3 +124,38 @@ class EventTime(models.Model):
             'day': self.start.day,
             'slug': self.event.slug,
         })
+
+    def get_next_event_time(self):
+        """Determines the next meeting"""
+
+        if not self._next:
+            try:
+                qs = EventTime.objects.filter(event=self.event).exclude(id__exact=self.id)
+                event_time= qs.filter(start__gte=self.start).order_by('start')[0]
+            except (EventTime.DoesNotExist, IndexError):
+                event_time = None
+            self._next = event_time
+
+        return self._next
+
+    def get_previous_meeting(self):
+        """Determines the previous meeting"""
+
+        if not self._previous:
+            try:
+                qs = EventTime.objects.all().exclude(id__exact=self.id)
+                event_time= qs.filter(start__lte=self.start).order_by('-start')[0]
+            except (EventTime.DoesNotExist, IndexError):
+                event_time = None
+            self._previous = event_time
+
+        return self._previous
+
+class RelatedEvent(models.Model):
+    eventtime = models.ForeignKey(EventTime)
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
+
+    def __unicode__(self):
+        return self.eventtime.event.__unicode__()

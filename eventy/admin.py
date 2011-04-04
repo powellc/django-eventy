@@ -4,7 +4,7 @@ from eventy.models import *
 class EventTimeAdmin(admin.ModelAdmin):
     list_display = ('event', 'start', 'end', 'place', )
     search_fields = ('event',)
-    list_filter = ( 'place',  )
+    list_filter = ( 'place', 'event', )
 
 admin.site.register(EventTime, EventTimeAdmin)
     

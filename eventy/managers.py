@@ -6,4 +6,4 @@ class UpcomingManager(Manager):
     """Returns upcoming events."""
 
     def get_query_set(self):
-        return super(UpcomingManager, self).get_query_set().filter(start__lte=datetime.now())
+        return super(UpcomingManager, self).get_query_set().filter(start__gte=datetime.now())

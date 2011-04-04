@@ -88,6 +88,7 @@ class EventTime(models.Model):
     place_string = models.CharField(_('One-off place'), max_length=200, blank=True)
     is_all_day = models.BooleanField(default=False)
     notes = models.TextField(_('Notes'), blank=True, null=True)
+    slug = models.SlugField(_('Event slug'), blank=True, editable=False)
 
     objects = models.Manager()
     upcoming_objects = UpcomingManager()
@@ -109,6 +110,9 @@ class EventTime(models.Model):
         return False
 
     def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self.event.slug
+
         if self.place and not self.place_string:
             self.place_string = self.place.__unicode__()
         super(EventTime, self).save(*args, **kwargs)
@@ -118,7 +122,7 @@ class EventTime(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('event-detail', None, {
+        return ('ev-event-detail', None, {
             'year': self.start.year,
             'month': self.start.strftime('%b').lower(),
             'day': self.start.day,
@@ -126,7 +130,7 @@ class EventTime(models.Model):
         })
 
     def get_next_event_time(self):
-        """Determines the next meeting"""
+        """Determines the next event time"""
 
         if not self._next:
             try:
@@ -138,8 +142,8 @@ class EventTime(models.Model):
 
         return self._next
 
-    def get_previous_meeting(self):
-        """Determines the previous meeting"""
+    def get_previous_event_time(self):
+        """Determines the previous event time"""
 
         if not self._previous:
             try:

@@ -34,7 +34,7 @@ class EventCalendar(calendar.HTMLCalendar):
             return self.day_cell(cssclass, '%d %s' % (day, ''.join('<div class="noevents"></div>')))
         return self.day_cell('noday', '&nbsp;')
 
-    def formatmonth(self, year, month):
+    def formatmonth(self, year, month, **kwargs):
         self.year, self.month = year, month
         return super(EventCalendar, self).formatmonth(year, month, 100)
 

@@ -54,10 +54,16 @@ class GetNextEventsNode(template.Node):
                 events = events.exclude(event__calendar__slug=cal_slug)
 
         logging.debug('Fetching %s events from calendar %s excluding %s.' % (self.limit, self.calendar_slug, self.excluded_cals))
-        if len(events[:self.limit]) == 1:
-            context[self.varname] = events[0]
+        if self.limit == 1:
+            try:
+                context[self.varname] = events[0]
+            except:
+                context[self.varname] = None
         else:
-            context[self.varname] = events[:self.limit]
+            try:
+                context[self.varname] = events[:self.limit]
+            except:
+                context[self.varname] = None
         return ''
 
 register.tag("get_next_events", do_get_next_events)
@@ -71,6 +77,6 @@ def show_month(events, date, size="large"):
     return {'month_table':month_table, 'size':size }
 
 @register.inclusion_tag('eventy/_year_table.html')
-def show_year(events, date, size="large"):
-    year_table = EventCalendar(events, size).formatyear(date)
+def show_year(events, date, size="small"):
+    year_table = EventCalendar(events, size).formatyear(int(date))
     return {'year_table':year_table }

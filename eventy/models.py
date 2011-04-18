@@ -96,6 +96,7 @@ class EventTime(models.Model):
     class Meta:
         verbose_name = _('event time')
         verbose_name_plural = _('event times')
+        get_latest_by = 'start'
 
     def __init__(self, *args, **kwargs):
         super (EventTime, self).__init__(*args, **kwargs)

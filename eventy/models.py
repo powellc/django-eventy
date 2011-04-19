@@ -7,8 +7,10 @@ from django.utils.translation import ugettext_lazy as _
 from django.db.models import permalink
 from django.contrib.auth.models import User
 from django.contrib.localflavor.us.models import USStateField
-from myutils.models import USAddressPhoneMixin
+
+from onec_utils.models import USAddressPhoneMixin
 from django_extensions.db.models import TimeStampedModel, TitleSlugDescriptionModel
+
 from eventy.managers import UpcomingManager
 
 class Place(TitleSlugDescriptionModel, TimeStampedModel, USAddressPhoneMixin):

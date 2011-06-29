@@ -20,8 +20,7 @@ Place - where an event takes place
 Urls, as mentioned above, are setup to make intuitive sense (and to
 forsake some aspects of DRY):
 
-<code>
-List events in January 2011:
+``List events in January 2011:
 <urlhook>/2011/jan/08/
 
 List events in calendar Specials
@@ -34,8 +33,7 @@ List event occurances for event "Super party tuesdays"
 <urlhook>/super-party-tuesdays/
 
 List event occurances for event "Super party tuesdays" in March 2010:
-<urlhook>/super-party-tuesdays/2010/mar/
-</code>
+<urlhook>/super-party-tuesdays/2010/mar/``
 
 That should give you a taste. Importantance has been placed on making
 the URLs make intuitive sense to a user, even if they may repeat
